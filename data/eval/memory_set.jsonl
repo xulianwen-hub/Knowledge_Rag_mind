@@ -1,0 +1,5 @@
+{"id":"mem-001","user_id":"user-a","transcript":"我主要研究船舶水动力学，平时关注襟翼舵和潜航器水动力性能。希望回答给出公式和页码。","expected_profiles":[{"dimension":"research_field","keywords":["船舶水动力学"]},{"dimension":"output_preference","keywords":["公式","页码"]}]}
+{"id":"mem-002","user_id":"user-b","transcript":"我做物理信息神经网络，主要用来求解偏微分方程，经常和 CFD 结果做对比。","expected_profiles":[{"dimension":"research_field","keywords":["物理信息神经网络"]},{"dimension":"method_preference","keywords":["偏微分方程"]}]}
+{"id":"mem-003","user_id":"user-c","transcript":"我关注无人水下航行器，做阻力优化和外形设计，喜欢先看综述再看方法。","expected_profiles":[{"dimension":"research_field","keywords":["无人水下航行器"]},{"dimension":"research_topics","keywords":["阻力优化"]}]}
+{"id":"mem-004","user_id":"user-d","transcript":"我的方向是计算机视觉，主要做目标检测，特别关注 YOLO 系列和遥感图像。","expected_profiles":[{"dimension":"research_field","keywords":["计算机视觉"]},{"dimension":"research_topics","keywords":["目标检测"]}]}
+{"id":"mem-005","user_id":"user-e","transcript":"我做模糊神经网络，关注 Takagi-Sugeno 模型和船舶运动预测。","expected_profiles":[{"dimension":"research_field","keywords":["模糊神经网络"]},{"dimension":"method_preference","keywords":["Takagi-Sugeno"]}]}

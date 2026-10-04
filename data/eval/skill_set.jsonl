@@ -1,0 +1,5 @@
+{"id":"skill-001","user_id":"user-a","transcript":"请比较不同艇型优化方法的优缺点，并给出适用场景。","expected_skill_keywords":["艇型","对比"],"expected_replay_pass":true}
+{"id":"skill-002","user_id":"user-b","transcript":"检索 PINN 求解偏微分方程的方法，并比较不同实现的适用条件。","expected_skill_keywords":["PINN","偏微分方程"],"expected_replay_pass":true}
+{"id":"skill-003","user_id":"user-c","transcript":"比较 YOLOv8n 和 RT-DETR 在小目标检测中的改进思路。","expected_skill_keywords":["YOLO","RT-DETR"],"expected_replay_pass":true}
+{"id":"skill-004","user_id":"user-d","transcript":"帮我写一份本周工作周报。","expected_skill_keywords":["周报"],"expected_replay_pass":false}
+{"id":"skill-005","user_id":"user-e","transcript":"总结多篇船舶辐射噪声论文，比较它们的研究方法。","expected_skill_keywords":["辐射噪声","综述"],"expected_replay_pass":true}

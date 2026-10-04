@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "knowresearch"
+version = "0.1.0"
+description = "知研 KnowResearch — 面向研究生/学者的个人科研知识库 Agent"
+requires-python = ">=3.11"
+dependencies = [
+    "python-dotenv>=1.0",
+    "pydantic>=2.0",
+    "openai>=1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,18 @@
+[
+  {
+    "name": "current_base_rerank",
+    "embedding_model": "BAAI/bge-base-zh-v1.5",
+    "reranker_model": "BAAI/bge-reranker-base",
+    "use_reranker": true,
+    "top_k": 5,
+    "notes": "当前生产基线"
+  },
+  {
+    "name": "base_no_rerank",
+    "embedding_model": "BAAI/bge-base-zh-v1.5",
+    "reranker_model": "",
+    "use_reranker": false,
+    "top_k": 5,
+    "notes": "验证 reranker 的实际收益"
+  }
+]

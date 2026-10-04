@@ -1,0 +1,53 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-meta/
+
+# ---- 环境变量 / 密钥（示例文件 .env.example 需要保留）----
+.env
+.env.*
+!.env.example
+
+# ---- IDE / 编辑器 ----
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# ---- 数据（体积大，不入库；保留目录占位与说明）----
+data/raw/*
+data/processed/*
+data/index/*
+!data/**/.gitkeep
+!data/**/README.md
+
+# ---- 模型权重 ----
+models/
+*.pt
+*.bin
+*.safetensors
+*.onnx
+
+# ---- 演示运行时数据 ----
+data/demo_runtime/
+
+# ---- 日志 / 缓存 ----
+logs/
+*.log
+.cache/
+.pytest_cache/
+.ipynb_checkpoints/
