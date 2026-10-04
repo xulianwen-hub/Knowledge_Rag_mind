@@ -6,6 +6,7 @@
 ![python](https://img.shields.io/badge/python-3.11-blue)
 ![frontend](https://img.shields.io/badge/frontend-Streamlit-red)
 ![api](https://img.shields.io/badge/api-FastAPI-009688)
+![license](https://img.shields.io/badge/license-MIT-green)
 
 ![Demo](docs/assets/demo.gif)
 
@@ -216,7 +217,7 @@ python scripts/run_eval.py --limit 10
 - 演示模式使用 Mock Embedding / Reranker，重点展示链路，不代表最终检索质量
 - 真实模型对比实验尚未运行
 - 生产部署所需的认证、权限和备份恢复仍需补充
-- License 尚未确定
+- License：MIT
 
 ## 后续规划
 
