@@ -1,5 +1,3 @@
-"""停止 Demo 进程。"""
-
 from __future__ import annotations
 
 import json
