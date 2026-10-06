@@ -1,12 +1,3 @@
-"""准备 GitHub / 面试演示数据。
-
-脚本会：
-1. 生成 3 篇小型演示 Word 文档
-2. 写入 PostgreSQL 文档存储
-3. 写入 demo 向量表和 BM25 索引
-4. 初始化演示用户画像、候选技能和正式技能
-"""
-
 from __future__ import annotations
 
 import os
