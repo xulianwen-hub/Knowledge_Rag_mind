@@ -8,7 +8,6 @@
 ![api](https://img.shields.io/badge/api-FastAPI-009688)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-![Demo](docs/assets/demo.gif)
 
 ## 项目亮点
 
