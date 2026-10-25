@@ -11,28 +11,6 @@
 - **可观测性**：trace_id、阶段耗时、token、运行指标、健康检查
 - **可演示前端**：Streamlit 问答、上传、记忆管理、技能管理
 
-## 界面截图
-
-### 问答与引用
-
-![问答](docs/assets/01-demo-chat.png)
-
-### 记忆管理
-
-![记忆管理](docs/assets/02-memory.png)
-
-### 技能管理
-
-![技能管理](docs/assets/03-skills.png)
-
-### 知识库上传
-
-![知识库](docs/assets/04-knowledge.png)
-
-### API 文档
-
-![API](docs/assets/05-api-docs.png)
-
 ## 架构
 
 ```mermaid
