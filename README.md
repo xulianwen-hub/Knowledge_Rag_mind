@@ -3,9 +3,6 @@
 面向研究生 / 学者的科研知识库 Agent：多源文档解析、混合检索、引用溯源、三层记忆、技能沉淀、工具层和 MCP 扩展。
 
 ![tests](https://img.shields.io/badge/tests-204%20passed-brightgreen)
-![python](https://img.shields.io/badge/python-3.11-blue)
-![frontend](https://img.shields.io/badge/frontend-Streamlit-red)
-![api](https://img.shields.io/badge/api-FastAPI-009688)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 
