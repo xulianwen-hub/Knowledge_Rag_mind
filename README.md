@@ -2,10 +2,6 @@
 
 面向研究生 / 学者的科研知识库 Agent：多源文档解析、混合检索、引用溯源、三层记忆、技能沉淀、工具层和 MCP 扩展。
 
-![tests](https://img.shields.io/badge/tests-204%20passed-brightgreen)
-![license](https://img.shields.io/badge/license-MIT-green)
-
-
 ## 项目亮点
 
 - **RAG 主链路**：PDF / Word 解析 → 切块 → 向量 + BM25 → RRF 融合 → rerank → 带引用生成
