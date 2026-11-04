@@ -2,6 +2,7 @@
 # 知研 KnowResearch
 
 面向研究生 / 学者的科研知识库 Agent：多源文档解析、混合检索、引用溯源、三层记忆、技能沉淀、工具层和 MCP 扩展。
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/7937783e-923c-4cfb-8c84-265c47f2bf1e" />
 
 ## 项目亮点
 
