@@ -4,6 +4,9 @@ from knowresearch.tools.executor import ToolExecutor
 from knowresearch.tools.local_knowledge_base import LocalKnowledgeBaseTool
 from knowresearch.tools.orchestrator import ToolOrchestrator
 from knowresearch.tools.registry import ToolRegistry
+from knowresearch.tools.arxiv_search import ArxivSearchTool
+from knowresearch.tools.memory_search import MemorySearchTool
+from knowresearch.tools.bibtex import BibTeXTool
 from knowresearch.tools.mcp_client import (
     StdioMCPClient,
     StreamableHTTPMCPClient,
@@ -14,6 +17,9 @@ __all__ = [
     "ToolRegistry",
     "ToolExecutor",
     "LocalKnowledgeBaseTool",
+    "ArxivSearchTool",
+    "MemorySearchTool",
+    "BibTeXTool",
     "ToolOrchestrator",
     "MCPToolAdapter",
     "register_mcp_tools",
