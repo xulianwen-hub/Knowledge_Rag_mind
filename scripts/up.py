@@ -29,7 +29,7 @@ def main() -> None:
 
     print("[2/4] 准备演示数据...")
     env = _demo_env()
-    _run([sys.executable, str(ROOT / "scripts" / "demo_seed.py")], env=env, check=True)
+    _run([sys.executable, str(ROOT / "scripts" / "seed.py")], env=env, check=True)
 
     processes = {}
     try:
@@ -81,7 +81,7 @@ def main() -> None:
     print(f"  Frontend: {FRONTEND_URL}")
     print(f"  日志目录: {LOG_DIR}")
     print("\n停止 Demo：")
-    print("  python scripts/demo_down.py")
+    print("  python scripts/down.py")
 
 
 def _demo_env() -> dict[str, str]:

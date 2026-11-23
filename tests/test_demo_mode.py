@@ -14,7 +14,7 @@ from knowresearch.adapters.skills import (
 )
 from knowresearch.bootstrap import build_embedding, build_llm, build_reranker
 from knowresearch.config import settings
-from scripts.demo_seed import _seed_memory_candidates, _seed_skill_data
+from scripts.seed import _seed_memory_candidates, _seed_skill_data
 
 
 def test_demo_llm_answers_from_reference():

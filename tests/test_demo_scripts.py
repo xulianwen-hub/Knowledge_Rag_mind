@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-import scripts.demo_up as demo_up
+from scripts import up as demo_up
 
 
 def test_demo_env_sets_demo_mode():
