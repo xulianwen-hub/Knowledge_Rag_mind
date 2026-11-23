@@ -63,6 +63,7 @@ def build_messages(
     memory_context: str = "",
     skill_context: str = "",
     tool_context: str = "",
+    figure_context: str = "",
 ) -> list[dict[str, str]]:
     """构建 LLM 调用的 messages。
 
@@ -75,6 +76,7 @@ def build_messages(
         memory_context: 长期记忆注入内容（当前主要是用户画像）
         skill_context: 匹配到的技能上下文
         tool_context: 工具执行结果上下文
+        figure_context: 命中图片的 VLM 解读文本
 
     Returns:
         messages 列表
@@ -97,6 +99,10 @@ def build_messages(
     if tool_context:
         messages.append(
             {"role": "system", "content": tool_context}
+        )
+    if figure_context:
+        messages.append(
+            {"role": "system", "content": f"【图片解读】\n{figure_context}"}
         )
     if history:
         messages.extend(history)

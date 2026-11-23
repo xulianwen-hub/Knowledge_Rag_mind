@@ -71,6 +71,7 @@ class QAEngine:
         skill_lifecycle: SkillLifecyclePort | None = None,
         tool_orchestrator=None,
         tool_permissions: set[str] | None = None,
+        figure_reader=None,
         max_history_messages: int = MAX_HISTORY_MESSAGES,
         ttl_seconds: int = DEFAULT_TTL_SECONDS,
     ) -> None:
@@ -87,6 +88,7 @@ class QAEngine:
         self.skill_lifecycle = skill_lifecycle
         self.tool_orchestrator = tool_orchestrator
         self.tool_permissions = tool_permissions
+        self.figure_reader = figure_reader
         self.max_history_messages = max_history_messages
         self.ttl_seconds = ttl_seconds
 
@@ -277,6 +279,213 @@ class QAEngine:
                 success=False,
             )
             return answer
+
+    def answer_stream(
+        self,
+        question: str,
+        session_id: str | None = None,
+        user_id: str | None = None,
+    ):
+        """流式问答：yield ``(event_type, payload)`` 元组。
+
+        事件类型：
+        - meta: 携带 trace_id
+        - start: 正文开始（前端可清空占位）
+        - delta: 文本增量，payload["text"]
+        - done: 结束，payload["text"] / payload["citations"]
+        - error: 出错，payload["detail"]
+
+        与 answer() 共用检索/重排/溯源/记忆/技能/工具链路，仅生成环节走流式；
+        引用抽取需要完整文本，因此在流结束后统一完成，并在 done 事件中返回。
+        """
+        trace_id = uuid.uuid4().hex
+        started_at = time.perf_counter()
+        logger.info("[trace_id=%s] 收到问题(流式): %s", trace_id, question[:100])
+        yield ("meta", {"trace_id": trace_id})
+
+        history: list[dict[str, str]] = []
+        summary: str = ""
+        retrieval_query = question
+        memory_context_text = ""
+        skill_context_text = ""
+        matched_skill_ids: list[str] = []
+        tool_context_text = ""
+        tool_results: list = []
+        candidates: list[Chunk] = []
+        top_chunks: list[Chunk] = []
+        citations: list = []
+        stage_timings: dict[str, float] = {}
+
+        try:
+            if session_id and self.session_store:
+                try:
+                    history, summary = self._load_history(session_id)
+                except Exception as e:
+                    logger.warning("加载会话历史失败，忽略历史: %s", e)
+
+            if user_id and self.memory_context:
+                memory_started = time.perf_counter()
+                try:
+                    retrieval_query = self.memory_context.rewrite_query(
+                        user_id, question
+                    )
+                    memory_context_text = self.memory_context.build_context(
+                        user_id, question
+                    )
+                except Exception as e:
+                    logger.warning("加载用户画像失败，忽略画像: %s", e)
+                stage_timings["memory_ms"] = self._elapsed_ms(memory_started)
+
+            if user_id and self.skill_context:
+                skill_started = time.perf_counter()
+                try:
+                    matched_skills = self.skill_context.match(user_id, question)
+                    matched_skill_ids = [skill.id for skill in matched_skills]
+                    skill_context_text = self.skill_context.build_context(
+                        user_id, question
+                    )
+                except Exception as e:
+                    logger.warning("加载技能失败，忽略技能: %s", e)
+                stage_timings["skill_ms"] = self._elapsed_ms(skill_started)
+
+            if self.tool_orchestrator:
+                tool_started = time.perf_counter()
+                try:
+                    tool_results = self.tool_orchestrator.run(
+                        question,
+                        permissions=self.tool_permissions,
+                    )
+                    tool_context_text = self.tool_orchestrator.build_context(
+                        tool_results
+                    )
+                except Exception as e:
+                    logger.warning("工具编排失败，忽略工具: %s", e)
+                stage_timings["tool_ms"] = self._elapsed_ms(tool_started)
+
+            retrieve_started = time.perf_counter()
+            candidates = self._retrieve(retrieval_query)
+            stage_timings["retrieve_ms"] = self._elapsed_ms(retrieve_started)
+
+            if not candidates:
+                text = NO_ANSWER_TEXT
+                yield ("delta", {"text": text})
+                self._save_if_session(session_id, question, text, history, summary)
+                self._save_trace(
+                    trace_id=trace_id,
+                    question=question,
+                    answer_text=text,
+                    status="no_results",
+                    session_id=session_id,
+                    user_id=user_id,
+                    candidates=candidates,
+                    top_chunks=top_chunks,
+                    citations=citations,
+                    retrieval_query=retrieval_query,
+                    memory_context_text=memory_context_text,
+                    skill_context_text=skill_context_text,
+                    matched_skill_ids=matched_skill_ids,
+                    tool_context_text=tool_context_text,
+                    tool_results=tool_results,
+                    stage_timings=stage_timings,
+                    started_at=started_at,
+                )
+                self._record_skill_usage(
+                    user_id=user_id, skill_ids=matched_skill_ids, success=False
+                )
+                yield ("done", {"text": text, "citations": []})
+                return
+
+            rerank_started = time.perf_counter()
+            top_chunks = self._rerank(question, candidates)
+            top_chunks = self._apply_context_budget(top_chunks)
+            stage_timings["rerank_ms"] = self._elapsed_ms(rerank_started)
+            citations = self.citation_builder.build(top_chunks)
+
+            yield ("start", {})
+
+            figure_context_text = ""
+            if self.figure_reader is not None:
+                try:
+                    figure_context_text = self.figure_reader.read_citations(
+                        citations, question
+                    )
+                except Exception as e:
+                    logger.warning("图片解读失败，忽略: %s", e)
+
+            parts: list[str] = []
+            generate_started = time.perf_counter()
+            try:
+                for delta in self.answer_generator.stream(
+                    question,
+                    top_chunks,
+                    citations,
+                    history=history,
+                    summary=summary,
+                    memory_context=memory_context_text,
+                    skill_context=skill_context_text,
+                    tool_context=tool_context_text,
+                    figure_context=figure_context_text,
+                ):
+                    parts.append(delta)
+                    yield ("delta", {"text": delta})
+            except Exception as e:
+                logger.warning("LLM 流式生成失败: %s", e)
+                if not parts:
+                    parts.append(SERVICE_UNAVAILABLE_TEXT)
+                    yield ("delta", {"text": SERVICE_UNAVAILABLE_TEXT})
+            stage_timings["generate_ms"] = self._elapsed_ms(generate_started)
+
+            full_text = "".join(parts)
+            if not full_text.strip():
+                full_text = NO_ANSWER_TEXT
+                yield ("delta", {"text": full_text})
+
+            used_citations = self.answer_generator._extract_used_citations(
+                full_text, citations
+            )
+            self._save_if_session(session_id, question, full_text, history, summary)
+
+            status = "success"
+            if full_text == SERVICE_UNAVAILABLE_TEXT:
+                status = "llm_fallback"
+            elif full_text == NO_ANSWER_TEXT:
+                status = "no_answer"
+            self._save_trace(
+                trace_id=trace_id,
+                question=question,
+                answer_text=full_text,
+                status=status,
+                session_id=session_id,
+                user_id=user_id,
+                candidates=candidates,
+                top_chunks=top_chunks,
+                citations=used_citations,
+                retrieval_query=retrieval_query,
+                memory_context_text=memory_context_text,
+                skill_context_text=skill_context_text,
+                matched_skill_ids=matched_skill_ids,
+                tool_context_text=tool_context_text,
+                tool_results=tool_results,
+                stage_timings=stage_timings,
+                started_at=started_at,
+            )
+            self._record_skill_usage(
+                user_id=user_id,
+                skill_ids=matched_skill_ids,
+                success=status == "success",
+            )
+            yield (
+                "done",
+                {
+                    "text": full_text,
+                    "citations": [
+                        c.model_dump(mode="json") for c in used_citations
+                    ],
+                },
+            )
+        except Exception as e:
+            logger.exception("[trace_id=%s] 流式链路未捕获异常: %s", trace_id, e)
+            yield ("error", {"detail": str(e)})
 
     def with_skill_context(self, skill_context: SkillContextPort | None) -> "QAEngine":
         """返回一个共享组件、但替换技能上下文的 QAEngine，用于技能回放。"""
@@ -522,6 +731,15 @@ class QAEngine:
     ) -> Answer:
         """生成答案。LLM 失败时返回兜底文案。"""
         try:
+            figure_context_text = ""
+            if self.figure_reader is not None:
+                try:
+                    figure_context_text = self.figure_reader.read_citations(
+                        citations, question
+                    )
+                except Exception as e:
+                    logger.warning("图片解读失败，忽略: %s", e)
+
             answer = self.answer_generator.generate(
                 question,
                 chunks,
@@ -531,6 +749,7 @@ class QAEngine:
                 memory_context=memory_context_text,
                 skill_context=skill_context_text,
                 tool_context=tool_context_text,
+                figure_context=figure_context_text,
             )
             answer.trace_id = trace_id
             if not answer.text.strip():

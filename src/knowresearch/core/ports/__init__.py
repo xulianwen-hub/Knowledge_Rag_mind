@@ -10,6 +10,7 @@
 """
 
 from knowresearch.core.ports.documents import DocumentStorePort
+from knowresearch.core.ports.agent import ActionPlannerPort
 from knowresearch.core.ports.memory import (
     LongTermMemoryPort,
     MemoryCandidateStorePort,
@@ -52,6 +53,8 @@ __all__ = [
     "ObjectStoragePort",
     # 文档
     "DocumentStorePort",
+    # Agent
+    "ActionPlannerPort",
     # 记忆
     "SessionStorePort",
     "WorkingMemoryPort",

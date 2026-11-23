@@ -35,8 +35,18 @@ from knowresearch.adapters import (
     PostgresSkillStore,
     PostgresTraceStore,
     PostgresVectorStore,
+    QwenVLM,
     RedisSessionStore,
     SQLiteDocumentStore,
+    SQLiteWorkingMemory,
+)
+from knowresearch.agent import (
+    AgentEngine,
+    HeuristicReflector,
+    IntentRouter,
+    JSONReActPlanner,
+    LLMIntentClassifier,
+    ReActAgent,
 )
 from knowresearch.config import settings
 from knowresearch.core.generation.answer_generator import AnswerGenerator
@@ -45,6 +55,7 @@ from knowresearch.core.ports import (
     EmbeddingProvider,
     FullTextStorePort,
     LLMProvider,
+    LongTermMemoryPort,
     MemoryContextPort,
     ObjectStoragePort,
     RerankerProvider,
@@ -53,12 +64,17 @@ from knowresearch.core.ports import (
     SkillLifecyclePort,
     TraceStorePort,
     VectorStorePort,
+    VLMProvider,
+    WorkingMemoryPort,
 )
 from knowresearch.core.qa_engine import QAEngine
 from knowresearch.core.retrieval.citation import CitationBuilder
 from knowresearch.core.retrieval.reranker import Reranker
 from knowresearch.core.retrieval.retriever import Retriever
+from knowresearch.ingestion.media_blocks import PDFMediaExtractor
 from knowresearch.ingestion.pipeline import IngestPipeline
+from knowresearch.ingestion.verbalizer import FigureVerbalizer, TableTranscriber
+from knowresearch.multimodal import FigureReader
 from knowresearch.memory import (
     ProfileExtractor,
     ProfileMemoryService,
@@ -73,7 +89,10 @@ from knowresearch.skills import (
 )
 from knowresearch.feedback import FeedbackService
 from knowresearch.tools import (
+    ArxivSearchTool,
+    BibTeXTool,
     LocalKnowledgeBaseTool,
+    MemorySearchTool,
     StdioMCPClient,
     StreamableHTTPMCPClient,
     ToolExecutor,
@@ -127,6 +146,43 @@ def build_llm() -> LLMProvider:
     if settings.app.demo_mode:
         return DemoLLM()
     return DeepSeekLLM()
+
+
+def build_vlm() -> VLMProvider:
+    """视觉语言模型（qwen3.8-omni-flash），用于图像描述化。"""
+    return QwenVLM()
+
+
+def build_figure_verbalizer(
+    vlm: VLMProvider | None = None,
+) -> FigureVerbalizer | None:
+    """图像描述化服务；未开启时返回 None（摄取走 caption+正文降级）。"""
+    if not settings.figure.verbalize_enabled:
+        return None
+    provider = vlm if vlm is not None else build_vlm()
+    return FigureVerbalizer(provider, retries=settings.figure.vlm_retries)
+
+
+def build_table_transcriber(
+    vlm: VLMProvider | None = None,
+) -> TableTranscriber | None:
+    """表格结构识别失败时用 VLM 转 Markdown 的兜底；未开启时返回 None。"""
+    if not settings.figure.verbalize_enabled:
+        return None
+    provider = vlm if vlm is not None else build_vlm()
+    return TableTranscriber(provider, retries=settings.figure.vlm_retries)
+
+
+def build_figure_reader(
+    object_storage: ObjectStoragePort | None = None,
+    vlm: VLMProvider | None = None,
+) -> FigureReader | None:
+    """查询侧图解读器；未开启时返回 None（命中图块只按文本引用）。"""
+    if not settings.figure.read_enabled:
+        return None
+    storage = object_storage or build_object_storage()
+    provider = vlm if vlm is not None else build_vlm()
+    return FigureReader(storage, provider)
 
 
 def build_document_store(db_path: str | None = None) -> DocumentStorePort:
@@ -308,6 +364,12 @@ def build_redis_session_store() -> RedisSessionStore:
     return RedisSessionStore(settings.storage.redis_url)
 
 
+def build_working_memory(db_path: str | None = None) -> SQLiteWorkingMemory:
+    """工作记忆（ReAct scratchpad）用本地 SQLite 存储。"""
+    path = Path(db_path) if db_path else sqlite_db_path()
+    return SQLiteWorkingMemory(str(path))
+
+
 def build_production_fulltext_store(
     vector_store: VectorStorePort | None = None,
 ) -> FullTextStorePort:
@@ -327,14 +389,36 @@ def build_ingest_pipeline(
     fulltext_store: FullTextStorePort,
     object_storage: ObjectStoragePort,
     embedding_provider: EmbeddingProvider | None = None,
+    media_extractor: PDFMediaExtractor | None = None,
+    figure_verbalizer: FigureVerbalizer | None = None,
+    table_transcriber: TableTranscriber | None = None,
 ) -> IngestPipeline:
     embedding = embedding_provider or build_embedding()
+    media = (
+        media_extractor
+        if media_extractor is not None
+        else PDFMediaExtractor(min_image_side=settings.figure.min_image_side)
+    )
+    verbalizer = (
+        figure_verbalizer
+        if figure_verbalizer is not None
+        else build_figure_verbalizer()
+    )
+    transcriber = (
+        table_transcriber
+        if table_transcriber is not None
+        else build_table_transcriber()
+    )
     return IngestPipeline(
         document_store=document_store,
         vector_store=vector_store,
         fulltext_store=fulltext_store,
         object_storage=object_storage,
         embedding_provider=embedding,
+        media_extractor=media,
+        figure_verbalizer=verbalizer,
+        table_transcriber=transcriber,
+        max_figures_per_doc=settings.figure.max_figures_per_doc,
     )
 
 
@@ -353,6 +437,7 @@ def build_qa_engine(
     tool_orchestrator: ToolOrchestrator | None = None,
     tool_permissions: set[str] | None = None,
     enable_local_tools: bool = False,
+    figure_reader: FigureReader | None = None,
 ) -> QAEngine:
     embedding = embedding_provider or build_embedding()
     reranker = reranker_provider or build_reranker()
@@ -385,6 +470,7 @@ def build_qa_engine(
         skill_lifecycle=skill_lifecycle,
         tool_orchestrator=tool_orchestrator,
         tool_permissions=tool_permissions,
+        figure_reader=figure_reader,
     )
     engine.tool_registry = tool_registry
     return engine
@@ -396,6 +482,9 @@ def build_production_ingest_pipeline(
     fulltext_store: FullTextStorePort | None = None,
     object_storage: ObjectStoragePort | None = None,
     embedding_provider: EmbeddingProvider | None = None,
+    media_extractor: PDFMediaExtractor | None = None,
+    figure_verbalizer: FigureVerbalizer | None = None,
+    table_transcriber: TableTranscriber | None = None,
 ) -> IngestPipeline:
     doc_store = document_store or build_production_document_store()
     vec_store = vector_store or build_production_vector_store()
@@ -407,6 +496,9 @@ def build_production_ingest_pipeline(
         fulltext_store=ft_store,
         object_storage=obj_storage,
         embedding_provider=embedding_provider,
+        media_extractor=media_extractor,
+        figure_verbalizer=figure_verbalizer,
+        table_transcriber=table_transcriber,
     )
 
 
@@ -425,6 +517,7 @@ def build_production_qa_engine(
     tool_orchestrator: ToolOrchestrator | None = None,
     tool_permissions: set[str] | None = None,
     enable_local_tools: bool = True,
+    figure_reader: FigureReader | None = None,
 ) -> QAEngine:
     doc_store = document_store or build_production_document_store()
     vec_store = vector_store or build_production_vector_store()
@@ -438,6 +531,9 @@ def build_production_qa_engine(
         skill_context = build_skill_context_service()
     if skill_lifecycle is None:
         skill_lifecycle = build_skill_lifecycle_service()
+    figure_reader = (
+        figure_reader if figure_reader is not None else build_figure_reader()
+    )
     return build_qa_engine(
         vector_store=vec_store,
         fulltext_store=ft_store,
@@ -453,4 +549,67 @@ def build_production_qa_engine(
         tool_orchestrator=tool_orchestrator,
         tool_permissions=tool_permissions,
         enable_local_tools=enable_local_tools,
+        figure_reader=figure_reader,
+    )
+
+
+def build_agent_engine(
+    qa_engine: QAEngine | None = None,
+    working_memory: WorkingMemoryPort | None = None,
+    llm_provider: LLMProvider | None = None,
+    tool_permissions: set[str] | None = None,
+    long_term_memory: LongTermMemoryPort | None = None,
+    document_store: DocumentStorePort | None = None,
+    enable_external_tools: bool = True,
+) -> AgentEngine:
+    """在 QAEngine 之上装配 ReAct 慢路径（默认由 settings.agent.enabled 控制开关）。
+
+    说明：
+    - 复用 QAEngine 已有的 retriever / answer_generator / citation_builder，
+      慢路径只新增「动作提案 + 循环 + 工作记忆」。
+    - 工具注册表独立构建，把 Retriever 包成 knowledge_base_search 工具。
+    - 工作记忆默认落本地 SQLite（ReAct scratchpad），失败不影响主流程。
+    """
+    engine = qa_engine or build_production_qa_engine()
+    llm = llm_provider or build_llm()
+
+    registry = ToolRegistry()
+    registry.register(LocalKnowledgeBaseTool(engine.retriever))
+    if long_term_memory is not None:
+        registry.register(MemorySearchTool(long_term_memory))
+    if document_store is not None:
+        registry.register(BibTeXTool(document_store))
+    if enable_external_tools:
+        registry.register(
+            ArxivSearchTool(timeout_seconds=settings.agent.step_timeout_seconds)
+        )
+    executor = ToolExecutor(
+        registry,
+        default_timeout_seconds=settings.agent.step_timeout_seconds,
+    )
+
+    react_agent = ReActAgent(
+        planner=JSONReActPlanner(llm),
+        registry=registry,
+        executor=executor,
+        working_memory=(
+            working_memory if working_memory is not None else build_working_memory()
+        ),
+        max_steps=settings.agent.max_steps,
+        max_llm_calls=settings.agent.max_llm_calls,
+        observation_max_chars=settings.agent.observation_max_chars,
+        permissions=tool_permissions,
+        reflector=(
+            HeuristicReflector(min_quality=settings.agent.reflection_min_quality)
+            if settings.agent.reflection_enabled
+            else None
+        ),
+    )
+
+    return AgentEngine(
+        qa_engine=engine,
+        react_agent=react_agent,
+        router=IntentRouter(classifier=LLMIntentClassifier(llm)),
+        enabled=settings.agent.enabled,
+        router_enabled=settings.agent.router_enabled,
     )

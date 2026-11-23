@@ -4,6 +4,8 @@ DeepSeek 兼容 OpenAI API 格式，用 openai SDK 调用。
 从 settings.llm 读取 api_key / base_url / model。
 """
 
+from typing import Iterator
+
 from openai import OpenAI
 
 from knowresearch.config import settings
@@ -52,3 +54,29 @@ class DeepSeekLLM(LLMProvider):
         else:
             self.last_usage = {}
         return response.choices[0].message.content or ""
+
+    def stream_with_messages(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> Iterator[str]:
+        """逐 token 流式生成，yield 每个增量文本片段。
+
+        开启 stream=True 后，服务端会边生成边返回；这里只取 delta.content 非空的片段。
+        流式响应默认不带 usage，因此流式调用后 last_usage 可能为空。
+        """
+        stream = self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+        )
+        self.last_usage = {}
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta

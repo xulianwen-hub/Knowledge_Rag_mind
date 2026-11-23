@@ -1,8 +1,11 @@
 """评估层：评估集加载、校验和后续指标评估。"""
 
 from knowresearch.evaluation.dataset import (
+    agent_dataset_stats,
     dataset_stats,
+    load_agent_eval_cases,
     load_eval_cases,
+    validate_agent_eval_cases,
     validate_eval_cases,
 )
 from knowresearch.evaluation.judge import LLMJudge, JudgeScore
@@ -34,11 +37,19 @@ from knowresearch.evaluation.skill_eval import (
     SkillEvaluationRunner,
     load_skill_eval_cases,
 )
+from knowresearch.evaluation.agent_eval import (
+    evaluate_routing,
+    run_multihop,
+    to_eval_cases,
+)
 
 __all__ = [
     "load_eval_cases",
+    "load_agent_eval_cases",
     "validate_eval_cases",
+    "validate_agent_eval_cases",
     "dataset_stats",
+    "agent_dataset_stats",
     "EvaluationRunner",
     "EvaluationReport",
     "CaseMetrics",
@@ -62,4 +73,7 @@ __all__ = [
     "SkillEvalReport",
     "SkillEvaluationRunner",
     "load_skill_eval_cases",
+    "evaluate_routing",
+    "to_eval_cases",
+    "run_multihop",
 ]

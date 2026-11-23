@@ -10,6 +10,7 @@
 """
 
 import re
+from typing import Iterator
 
 from pydantic import BaseModel
 
@@ -56,6 +57,7 @@ class AnswerGenerator:
         memory_context: str = "",
         skill_context: str = "",
         tool_context: str = "",
+        figure_context: str = "",
     ) -> Answer:
         """生成答案。
 
@@ -68,6 +70,7 @@ class AnswerGenerator:
             memory_context: 长期记忆注入内容（当前主要是用户画像）
             skill_context: 匹配到的技能上下文
             tool_context: 工具执行结果上下文
+            figure_context: 命中图片的 VLM 解读文本
 
         Returns:
             Answer 对象
@@ -84,6 +87,7 @@ class AnswerGenerator:
             memory_context=memory_context,
             skill_context=skill_context,
             tool_context=tool_context,
+            figure_context=figure_context,
         )
 
         raw_text = self.llm.generate_with_messages(
@@ -98,6 +102,44 @@ class AnswerGenerator:
             text=raw_text,
             citations=used_citations,
             usage=getattr(self.llm, "last_usage", {}) or {},
+        )
+
+    def stream(
+        self,
+        question: str,
+        chunks: list,
+        citations: list[Citation],
+        history: list[dict[str, str]] | None = None,
+        summary: str = "",
+        memory_context: str = "",
+        skill_context: str = "",
+        tool_context: str = "",
+        figure_context: str = "",
+    ) -> Iterator[str]:
+        """流式生成答案，逐块 yield 文本增量。
+
+        与 generate 的区别：不返回 Answer，只产出文本片段；
+        引用抽取需要完整文本，由调用方在流结束后用 _extract_used_citations 完成。
+        """
+        if not citations:
+            yield NO_ANSWER_TEXT
+            return
+
+        messages = build_messages(
+            question,
+            citations,
+            max_chunk_chars=self.max_chunk_chars,
+            history=history,
+            summary=summary,
+            memory_context=memory_context,
+            skill_context=skill_context,
+            tool_context=tool_context,
+            figure_context=figure_context,
+        )
+        yield from self.llm.stream_with_messages(
+            messages,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
         )
 
     @staticmethod

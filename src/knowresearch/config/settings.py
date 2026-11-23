@@ -32,6 +32,14 @@ def _env(key: str, default: str = "") -> str:
     return value
 
 
+def _env_bool(key: str, default: bool = False) -> bool:
+    """读取布尔型环境变量，接受 1/true/yes/on（大小写不敏感）。"""
+    value = os.getenv(key)
+    if value is None or value == "":
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 # ================================================================
 # 各子模块配置
 # ================================================================
@@ -118,6 +126,53 @@ class AppConfig(BaseModel):
     )
 
 
+class FigureConfig(BaseModel):
+    """图表摄取配置（方案一：图像描述化）。"""
+
+    verbalize_enabled: bool = Field(
+        default_factory=lambda: _env_bool("FIGURE_VERBALIZE_ENABLED", False)
+    )
+    read_enabled: bool = Field(
+        default_factory=lambda: _env_bool("FIGURE_READ_ENABLED", False)
+    )
+    min_image_side: float = Field(
+        default_factory=lambda: float(_env("FIGURE_MIN_SIDE", "30"))
+    )
+    max_figures_per_doc: int = Field(
+        default_factory=lambda: int(_env("FIGURE_MAX_PER_DOC", "20"))
+    )
+    vlm_retries: int = Field(
+        default_factory=lambda: int(_env("FIGURE_VLM_RETRIES", "1"))
+    )
+
+
+class AgentConfig(BaseModel):
+    """ReAct Agent 配置（默认开启，可用 AGENT_ENABLED=false 关闭）。"""
+
+    enabled: bool = Field(default_factory=lambda: _env_bool("AGENT_ENABLED", True))
+    router_enabled: bool = Field(
+        default_factory=lambda: _env_bool("AGENT_ROUTER_ENABLED", True)
+    )
+    max_steps: int = Field(
+        default_factory=lambda: int(_env("AGENT_MAX_STEPS", "5"))
+    )
+    max_llm_calls: int = Field(
+        default_factory=lambda: int(_env("AGENT_MAX_LLM_CALLS", "8"))
+    )
+    observation_max_chars: int = Field(
+        default_factory=lambda: int(_env("AGENT_OBSERVATION_MAX_CHARS", "300"))
+    )
+    step_timeout_seconds: float = Field(
+        default_factory=lambda: float(_env("AGENT_STEP_TIMEOUT_SECONDS", "15"))
+    )
+    reflection_enabled: bool = Field(
+        default_factory=lambda: _env_bool("AGENT_REFLECTION_ENABLED", True)
+    )
+    reflection_min_quality: float = Field(
+        default_factory=lambda: float(_env("AGENT_REFLECTION_MIN_QUALITY", "0.2"))
+    )
+
+
 # ================================================================
 # 顶层设置（聚合所有子模块）
 # ================================================================
@@ -134,6 +189,8 @@ class Settings(BaseModel):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     log: LogConfig = Field(default_factory=LogConfig)
     app: AppConfig = Field(default_factory=AppConfig)
+    figure: FigureConfig = Field(default_factory=FigureConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
 
 
 # 全局单例——整个项目只 import 这一个对象

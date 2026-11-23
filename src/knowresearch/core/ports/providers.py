@@ -5,7 +5,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Iterator
 
 
 class EmbeddingProvider(ABC):
@@ -72,6 +72,21 @@ class LLMProvider(ABC):
         max_tokens: int = 2048,
     ) -> str:
         """多轮对话生成。messages 格式：[{"role": "user"/"assistant"/"system", "content": "..."}]"""
+
+    def stream_with_messages(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> Iterator[str]:
+        """流式生成，逐块 yield 文本增量。
+
+        默认回退为非流式生成后逐字符产出，保证所有子类都能用于流式场景。
+        真实适配器（如 DeepSeekLLM）应重写为 token 级流式以获得真正的低延迟。
+        """
+        full = self.generate_with_messages(messages, temperature, max_tokens)
+        for ch in full:
+            yield ch
 
 
 class VLMProvider(ABC):

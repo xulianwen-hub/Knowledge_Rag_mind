@@ -22,6 +22,8 @@ class Citation(BaseModel):
     page: int = 0
     content: str = ""
     index: int = 0
+    chunk_type: str = ""
+    image_key: str = ""
 
 
 class CitationBuilder:
@@ -49,6 +51,8 @@ class CitationBuilder:
                 page=chunk.page,
                 content=chunk.content,
                 index=index,
+                chunk_type=chunk.metadata.get("chunk_type", ""),
+                image_key=chunk.metadata.get("image_key", ""),
             )
             citations.append(citation)
 

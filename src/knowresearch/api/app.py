@@ -6,13 +6,14 @@ API 只负责参数校验、调用领域服务、返回结构化响应；
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from knowresearch.core.observability import metrics
@@ -61,6 +62,7 @@ def create_app(
     skill_lifecycle_service: Any | None = None,
     feedback_service: Any | None = None,
     ingestion_pipeline: Any | None = None,
+    object_storage: Any | None = None,
     allow_lazy_production: bool = True,
     health_checks: dict | None = None,
 ) -> FastAPI:
@@ -82,6 +84,7 @@ def create_app(
     app.state.skill_lifecycle_service = skill_lifecycle_service
     app.state.feedback_service = feedback_service
     app.state.ingestion_pipeline = ingestion_pipeline
+    app.state.object_storage = object_storage
     app.state.allow_lazy_production = allow_lazy_production
     app.state.health_checks = health_checks or {}
 
@@ -158,6 +161,42 @@ def create_app(
                 for citation in answer.citations
             ],
         }
+
+    @app.post("/chat/stream")
+    def chat_stream(request: ChatRequest):
+        """SSE 流式问答。
+
+        响应 Content-Type 为 text/event-stream，每条事件格式为：
+            data: {"type": "<event>", ...}\\n\\n
+        事件类型见 QAEngine.answer_stream：meta / start / delta / done / error。
+        用同步生成器 + 同步路由，FastAPI 会在线程池中执行，避免阻塞事件循环。
+        """
+        engine = _get_qa_engine(app)
+
+        def event_generator():
+            try:
+                for event_type, payload in engine.answer_stream(
+                    request.question,
+                    session_id=request.session_id,
+                    user_id=request.user_id,
+                ):
+                    data = {"type": event_type}
+                    data.update(payload)
+                    yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+            except Exception as e:
+                yield (
+                    f"data: {json.dumps({'type': 'error', 'detail': str(e)}, ensure_ascii=False)}\n\n"
+                )
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     @app.get("/tools")
     def list_tools():
@@ -315,9 +354,21 @@ def create_app(
             "document_id": result.document_id,
             "section_count": result.section_count,
             "chunk_count": result.chunk_count,
+            "table_count": getattr(result, "table_count", 0),
+            "figure_count": getattr(result, "figure_count", 0),
             "skipped": result.skipped,
             "error": result.error,
         }
+
+    @app.get("/documents/{document_id}/figures/{key:path}")
+    def get_figure_image(document_id: str, key: str):
+        storage = _get_object_storage(app)
+        full_key = f"figures/{document_id}/{key}"
+        try:
+            data = storage.get(full_key)
+        except Exception:
+            raise HTTPException(status_code=404, detail="图片不存在") from None
+        return Response(content=data, media_type="image/png")
 
     return app
 
@@ -332,15 +383,43 @@ def _get_qa_engine(app: FastAPI):
     if app.state.qa_engine is None:
         if not app.state.allow_lazy_production:
             raise HTTPException(status_code=503, detail="QAEngine 未配置")
-        from knowresearch.bootstrap import build_production_qa_engine
+        from knowresearch.bootstrap import (
+            build_agent_engine,
+            build_production_qa_engine,
+        )
+        from knowresearch.config import settings
 
-        app.state.qa_engine = build_production_qa_engine()
+        base_engine = build_production_qa_engine()
+        if settings.agent.enabled:
+            # ReAct 慢路径：复杂问题走多步循环，简单问题仍走 base_engine 快路径
+            app.state.qa_engine = build_agent_engine(
+                qa_engine=base_engine,
+                long_term_memory=getattr(
+                    base_engine.memory_context, "long_term_memory", None
+                ),
+                document_store=getattr(
+                    base_engine.citation_builder, "document_store", None
+                ),
+            )
+        else:
+            app.state.qa_engine = base_engine
         app.state.tool_registry = getattr(
-            app.state.qa_engine,
+            base_engine,
             "tool_registry",
             None,
         )
     return app.state.qa_engine
+
+
+def _get_object_storage(app: FastAPI):
+    if app.state.object_storage is not None:
+        return app.state.object_storage
+    if not app.state.allow_lazy_production:
+        raise HTTPException(status_code=503, detail="对象存储未配置")
+    from knowresearch.bootstrap import build_object_storage
+
+    app.state.object_storage = build_object_storage()
+    return app.state.object_storage
 
 
 app = create_app()
