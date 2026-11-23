@@ -20,5 +20,7 @@ jobs:
           pip install -r requirements/retrieval.txt
           pip install -r requirements/optional.txt
           pip install -e .
+      - name: Install test tools
+        run: pip install pytest
       - name: Run tests
-        run: pytest tests -q
+        run: python -m pytest tests -q
