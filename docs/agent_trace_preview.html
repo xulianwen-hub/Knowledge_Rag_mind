@@ -1,0 +1,125 @@
+<div id="kr-agent-trace" class="card kr-trace" role="img" aria-label="KnowResearch Agent 决策轨迹演示">
+  <div class="kr-titlebar">
+    <span class="kr-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="kr-title">KnowResearch · Agent Trace</span>
+    <span class="kr-status"><i data-lucide="activity" aria-hidden="true"></i>ReAct</span>
+  </div>
+  <div class="kr-body">
+    <div class="kr-step" style="--d:.05s">
+      <span class="kr-tag" data-kind="route">路由</span>
+      <div class="kr-content">识别为复杂问题，进入 ReAct 循环</div>
+    </div>
+    <div class="kr-step" style="--d:.25s">
+      <span class="kr-tag" data-kind="thought">Thought</span>
+      <div class="kr-content">先查第一篇论文里 PINN 的建模方式</div>
+    </div>
+    <div class="kr-step" style="--d:.45s">
+      <span class="kr-tag" data-kind="action">Action</span>
+      <div class="kr-content"><code>knowledge_base_search("PINN 细长体飞行器气动特性预测")</code></div>
+    </div>
+    <div class="kr-step" style="--d:.65s">
+      <span class="kr-tag" data-kind="obs">Observation</span>
+      <div class="kr-content">命中《基于PINN的细长体飞行器气动特性预测研究_王康晋.pdf》 p.3</div>
+    </div>
+    <div class="kr-step" style="--d:.85s">
+      <span class="kr-tag" data-kind="thought">Thought</span>
+      <div class="kr-content">还缺螺旋桨尾流场重构那篇，再查一次</div>
+    </div>
+    <div class="kr-step" style="--d:1.05s">
+      <span class="kr-tag" data-kind="action">Action</span>
+      <div class="kr-content"><code>knowledge_base_search("PINN 螺旋桨尾流场重构")</code></div>
+    </div>
+    <div class="kr-step" style="--d:1.25s">
+      <span class="kr-tag" data-kind="obs">Observation</span>
+      <div class="kr-content">命中《基于物理信息神经网络的船舶螺旋桨尾流场重构_侯先瑞.pdf》 p.5</div>
+    </div>
+    <div class="kr-step" style="--d:1.45s">
+      <span class="kr-tag" data-kind="final">Final</span>
+      <div class="kr-content">综合两次检索结果，给出带引用的对比答案。</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #kr-agent-trace {
+    max-width: 680px;
+    overflow: hidden;
+  }
+  #kr-agent-trace .kr-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  #kr-agent-trace .kr-dots {
+    display: inline-flex;
+    gap: 5px;
+  }
+  #kr-agent-trace .kr-dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--muted-foreground);
+    opacity: .5;
+  }
+  #kr-agent-trace .kr-title {
+    color: var(--foreground);
+    font-weight: 500;
+  }
+  #kr-agent-trace .kr-status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+  #kr-agent-trace .kr-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px 16px;
+  }
+  #kr-agent-trace .kr-step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    opacity: 0;
+    animation: kr-step-in .5s ease forwards;
+    animation-delay: var(--d, 0s);
+  }
+  #kr-agent-trace .kr-tag {
+    flex: 0 0 72px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 1.4;
+    letter-spacing: .03em;
+  }
+  #kr-agent-trace .kr-tag[data-kind="route"] { color: var(--purple); }
+  #kr-agent-trace .kr-tag[data-kind="plan"] { color: var(--orange); }
+  #kr-agent-trace .kr-tag[data-kind="thought"] { color: var(--purple); }
+  #kr-agent-trace .kr-tag[data-kind="action"] { color: var(--blue); }
+  #kr-agent-trace .kr-tag[data-kind="obs"] { color: var(--green); }
+  #kr-agent-trace .kr-tag[data-kind="reflect"] { color: var(--yellow); }
+  #kr-agent-trace .kr-tag[data-kind="final"] { color: var(--green); }
+  #kr-agent-trace .kr-content {
+    color: var(--foreground);
+    line-height: 1.45;
+  }
+  #kr-agent-trace .kr-content code {
+    color: var(--foreground);
+    font-size: 12px;
+  }
+  @keyframes kr-step-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #kr-agent-trace .kr-step {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

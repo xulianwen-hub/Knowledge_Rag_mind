@@ -104,27 +104,37 @@ def _render_chat() -> None:
         st.session_state["messages"].append({"role": "user", "content": question})
         with st.chat_message("user"):
             st.markdown(question)
-        try:
-            result = _client().chat(
-                question,
-                session_id=st.session_state["session_id"],
-                user_id=st.session_state["user_id"],
-            )
-            answer = result.get("text", "")
-            citations = result.get("citations", [])
-            st.session_state["messages"].append(
-                {"role": "assistant", "content": answer, "citations": citations}
-            )
-            with st.chat_message("assistant"):
-                st.markdown(answer)
-                for citation in citations:
-                    st.caption(
-                        f"[{citation.get('index', '')}] "
-                        f"{citation.get('document_title', '')} "
-                        f"第{citation.get('page', 0)}页"
-                    )
-        except ApiError as e:
-            st.error(f"问答失败：{e}")
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            full_text = ""
+            citations = []
+            try:
+                for event in _client().chat_stream(
+                    question,
+                    session_id=st.session_state["session_id"],
+                    user_id=st.session_state["user_id"],
+                ):
+                    etype = event.get("type")
+                    if etype == "delta":
+                        full_text += event.get("text", "")
+                        placeholder.markdown(full_text)
+                    elif etype == "done":
+                        full_text = event.get("text", full_text)
+                        citations = event.get("citations", [])
+                        placeholder.markdown(full_text)
+                        for citation in citations:
+                            st.caption(
+                                f"[{citation.get('index', '')}] "
+                                f"{citation.get('document_title', '')} "
+                                f"第{citation.get('page', 0)}页"
+                            )
+                    elif etype == "error":
+                        st.error(event.get("detail", "未知错误"))
+            except ApiError as e:
+                st.error(f"问答失败：{e}")
+        st.session_state["messages"].append(
+            {"role": "assistant", "content": full_text, "citations": citations}
+        )
 
 
 def _render_knowledge() -> None:

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from typing import Iterator
+
 import httpx
 
 
@@ -44,6 +47,41 @@ class KnowResearchApiClient:
                 "user_id": user_id,
             },
         )
+
+    def chat_stream(
+        self,
+        question: str,
+        session_id: str | None = None,
+        user_id: str | None = None,
+    ) -> Iterator[dict]:
+        """流式问答，返回解析后的 SSE 事件迭代器。
+
+        每个元素是一个 dict，含 "type" 字段（meta/start/delta/done/error）。
+        必须消费完或显式关闭生成器，以释放底层连接。
+        """
+        with self._client.stream(
+            "POST",
+            "/chat/stream",
+            json={
+                "question": question,
+                "session_id": session_id,
+                "user_id": user_id,
+            },
+        ) as response:
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                detail = ""
+                try:
+                    detail = e.response.json().get("detail", "")
+                except Exception:
+                    detail = e.response.text
+                raise ApiError(f"HTTP {e.response.status_code}: {detail}") from e
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                if line.startswith("data: "):
+                    yield json.loads(line[6:])
 
     def list_tools(self) -> dict:
         return self._request("GET", "/tools")

@@ -1,0 +1,25 @@
+{"id":"route-001","task":"routing","question":"你好，你能帮我做什么？","expected_intent":"chitchat","should_retrieve":false,"difficulty":"easy","notes":"典型闲聊，应直答不检索"}
+{"id":"route-002","task":"routing","question":"谢谢","expected_intent":"chitchat","should_retrieve":false,"difficulty":"easy","notes":"道谢短句，应直答"}
+{"id":"route-003","task":"routing","question":"你是谁？","expected_intent":"chitchat","should_retrieve":false,"difficulty":"easy","notes":"身份询问，应直答"}
+{"id":"route-004","task":"routing","question":"嗨","expected_intent":"chitchat","should_retrieve":false,"difficulty":"easy","notes":"单字招呼"}
+{"id":"route-005","task":"routing","question":"介绍一下你的功能","expected_intent":"chitchat","should_retrieve":false,"difficulty":"easy","notes":"功能介绍，含‘介绍一下’触发词"}
+{"id":"route-006","task":"routing","question":"PINN 是什么？","expected_intent":"single_doc_qa","should_retrieve":true,"difficulty":"easy","notes":"单文档概念问答，走快路径检索"}
+{"id":"route-007","task":"routing","question":"这篇论文的核心贡献是什么？","expected_intent":"single_doc_qa","should_retrieve":true,"difficulty":"medium","notes":"需结合上下文指代消解，但仍为单文档问答"}
+{"id":"route-008","task":"routing","question":"物理信息神经网络如何重构船舶螺旋桨尾流场？","expected_intent":"single_doc_qa","should_retrieve":true,"difficulty":"medium","notes":"单文档方法问答"}
+{"id":"route-009","task":"routing","question":"舵型参数如何影响襟翼舵升力特性？","expected_intent":"single_doc_qa","should_retrieve":true,"difficulty":"medium","notes":"单文档事实问答"}
+{"id":"route-010","task":"routing","question":"科考船水下辐射噪声全生命周期控制包括哪些方面？","expected_intent":"single_doc_qa","should_retrieve":true,"difficulty":"medium","notes":"单文档综述型事实，含‘哪些方面’但无调研触发词"}
+{"id":"route-011","task":"routing","question":"对比 PINN 在细长体飞行器气动预测和船舶螺旋桨尾流场重构中的应用差异。","expected_intent":"comparison","should_retrieve":true,"difficulty":"hard","notes":"跨文档对比，应走 ReAct"}
+{"id":"route-012","task":"routing","question":"比较 Takagi-Sugeno 模糊神经网络和减聚类 ANFIS 在船舶运动预测中的用途。","expected_intent":"comparison","should_retrieve":true,"difficulty":"hard","notes":"跨文档对比"}
+{"id":"route-013","task":"routing","question":"改进 YOLOv8n 和 RT-DETR 的改进思路有什么不同？","expected_intent":"comparison","should_retrieve":true,"difficulty":"hard","notes":"跨文档对比"}
+{"id":"route-014","task":"routing","question":"分别说明 PINN 和模糊神经网络各自解决什么问题。","expected_intent":"comparison","should_retrieve":true,"difficulty":"medium","notes":"‘分别’触发对比与任务分解"}
+{"id":"route-015","task":"routing","question":"哪个更适合做船舶横摇预测，ANFIS 还是 TSK？","expected_intent":"comparison","should_retrieve":true,"difficulty":"hard","notes":"选择型对比，需综合两条证据"}
+{"id":"route-016","task":"routing","question":"调研物理信息神经网络在流体力学中的最新进展。","expected_intent":"survey","should_retrieve":true,"difficulty":"hard","notes":"调研类，应走多步规划"}
+{"id":"route-017","task":"routing","question":"PINN 在非均质材料力学研究中的研究进展如何？","expected_intent":"survey","should_retrieve":true,"difficulty":"medium","notes":"单文档综述但语义属调研"}
+{"id":"route-018","task":"routing","question":"水下无人航行器编队协同搜索的研究综述关注什么？","expected_intent":"survey","should_retrieve":true,"difficulty":"medium","notes":"含‘综述’触发词"}
+{"id":"route-019","task":"routing","question":"国外大型无人水下航行器的发展综述包括什么？","expected_intent":"survey","should_retrieve":true,"difficulty":"easy","notes":"含‘发展综述’触发词"}
+{"id":"route-020","task":"routing","question":"我上个月读过的 MoE 论文有哪些？","expected_intent":"memory","should_retrieve":true,"difficulty":"medium","notes":"长期记忆/阅读历史查询"}
+{"id":"route-021","task":"routing","question":"我上次读的那篇讲螺旋桨尾流场的论文是什么？","expected_intent":"memory","should_retrieve":true,"difficulty":"medium","notes":"记忆查询，含指代"}
+{"id":"route-022","task":"routing","question":"我之前研究的方向是什么？","expected_intent":"memory","should_retrieve":true,"difficulty":"easy","notes":"画像记忆查询"}
+{"id":"route-023","task":"routing","question":"我看过哪些关于目标检测的论文？","expected_intent":"memory","should_retrieve":true,"difficulty":"medium","notes":"阅读历史查询"}
+{"id":"route-024","task":"routing","question":"生成这篇论文的 BibTeX。","expected_intent":"assist","should_retrieve":false,"difficulty":"easy","notes":"辅助产出，应走 BibTeX 工具而非普通检索"}
+{"id":"route-025","task":"routing","question":"根据我的阅读历史推荐相关论文。","expected_intent":"assist","should_retrieve":true,"difficulty":"medium","notes":"辅助产出，需记忆+检索协同"}

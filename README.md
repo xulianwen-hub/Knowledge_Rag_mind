@@ -1,24 +1,65 @@
-
 # 知研 KnowResearch
 
 面向研究生 / 学者的科研知识库 Agent：多源文档解析、混合检索、引用溯源、三层记忆、技能沉淀、工具层和 MCP 扩展。
+
+![tests](https://img.shields.io/badge/tests-204%20passed-brightgreen)
+![python](https://img.shields.io/badge/python-3.11-blue)
+![frontend](https://img.shields.io/badge/frontend-Streamlit-red)
+![api](https://img.shields.io/badge/api-FastAPI-009688)
+![license](https://img.shields.io/badge/license-MIT-green)
+
 <img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/7937783e-923c-4cfb-8c84-265c47f2bf1e" />
 
 ## 项目亮点
 
+- **Agentic 编排**：六类意图路由（闲聊 / 单文档问答 / 对比 / 调研 / 记忆 / 辅助产出）+ ReAct 主循环 + CRAG 式检索质量反思 + 查询分解
 - **RAG 主链路**：PDF / Word 解析 → 切块 → 向量 + BM25 → RRF 融合 → rerank → 带引用生成
 - **三层记忆**：Redis 短期记忆、PostgreSQL 长期画像、候选画像审核
 - **技能沉淀**：从 traces 抽取候选技能、回放验证、审核、注入、反馈和版本回滚
-- **可插拔工具层**：本地知识库工具 + MCP stdio / streamable HTTP 工具
+- **可插拔工具层**：本地混合检索 / 长期记忆 / arXiv / BibTeX + MCP stdio / streamable HTTP 工具
 - **可观测性**：trace_id、阶段耗时、token、运行指标、健康检查
 - **可演示前端**：Streamlit 问答、上传、记忆管理、技能管理
+
+## 界面截图
+
+### 问答与引用
+
+![问答](docs/assets/01-demo-chat.png)
+
+### 记忆管理
+
+![记忆管理](docs/assets/02-memory.png)
+
+### 技能管理
+
+![技能管理](docs/assets/03-skills.png)
+
+### 知识库上传
+
+![知识库](docs/assets/04-knowledge.png)
+
+### API 文档
+
+![API](docs/assets/05-api-docs.png)
 
 ## 架构
 
 ```mermaid
 flowchart TB
     UI[Streamlit 前端] --> API[FastAPI 服务层]
-    API --> QA[QAEngine]
+    API --> AGENT[AgentEngine]
+
+    AGENT --> ROUTER[六类意图路由]
+    ROUTER -->|闲聊| DIRECT[直答]
+    ROUTER -->|单文档| QA[QAEngine 快路径]
+    ROUTER -->|对比/调研/记忆| REACT[ReAct 主循环]
+    REACT --> TOOLS[工具层]
+    TOOLS --> LOCAL[本地知识库工具]
+    TOOLS --> MEMTOOL[长期记忆工具]
+    TOOLS --> ARXIV[arXiv 搜索]
+    TOOLS --> BIBTEX[BibTeX 生成]
+    TOOLS --> MCP[MCP 工具]
+    REACT --> REFLECT[CRAG 检索反思]
 
     QA --> RET[混合检索 Retriever]
     RET --> VEC[pgvector 向量检索]
@@ -33,10 +74,6 @@ flowchart TB
     QA --> SKILL[技能系统]
     SKILL --> PGS[(PostgreSQL 技能库)]
 
-    QA --> TOOL[工具层]
-    TOOL --> LOCAL[本地知识库工具]
-    TOOL --> MCP[MCP 工具]
-
     QA --> LLM[LLM Provider]
     QA --> TRACE[Trace / Metrics]
 ```
@@ -46,7 +83,7 @@ flowchart TB
 ### 1. 启动 Demo
 
 ```powershell
-python scripts/demo_up.py
+python scripts/up.py
 ```
 
 该命令会：
@@ -66,13 +103,13 @@ http://localhost:8000/docs
 检查状态：
 
 ```powershell
-python scripts/demo_status.py
+python scripts/status.py
 ```
 
 停止：
 
 ```powershell
-python scripts/demo_down.py
+python scripts/down.py
 ```
 
 ### 2. Demo 模式说明
@@ -184,5 +221,17 @@ python scripts/run_eval.py --limit 10
 - 失败率
 - P95 延迟
 
+## 已知限制
+
+- 演示模式使用 Mock Embedding / Reranker，重点展示链路，不代表最终检索质量
+- 真实模型对比实验尚未运行
+- 生产部署所需的认证、权限和备份恢复仍需补充
 - License：MIT
 
+## 后续规划
+
+- 运行完整 62 篇论文的真实评估
+- 完成 embedding / reranker 对比实验
+- 增加真实演示视频
+- 完善错误分类和告警
+- 补充生产部署文档
