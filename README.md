@@ -184,17 +184,5 @@ python scripts/run_eval.py --limit 10
 - 失败率
 - P95 延迟
 
-## 已知限制
-
-- 演示模式使用 Mock Embedding / Reranker，重点展示链路，不代表最终检索质量
-- 真实模型对比实验尚未运行
-- 生产部署所需的认证、权限和备份恢复仍需补充
 - License：MIT
 
-## 后续规划
-
-- 运行完整 62 篇论文的真实评估
-- 完成 embedding / reranker 对比实验
-- 增加真实演示视频
-- 完善错误分类和告警
-- 补充生产部署文档
