@@ -51,3 +51,7 @@ logs/
 .cache/
 .pytest_cache/
 .ipynb_checkpoints/
+
+# ---- 个人临时文件（不入库）----
+tmp_resume.docx
+_smoke_stream.py
